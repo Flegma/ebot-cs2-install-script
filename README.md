@@ -5,7 +5,7 @@ I will be updating the script with new stuff, this is only first release because
 RUN THE SCRIPT AS ROOT (everything should be pretty straighforward):
 
 ```
-wget https://raw.githubusercontent.com/Flegma/ebot-cs2-install-script/main/ebot-cs2-install.sh && chmod +x ebot-cs2-install.sh && ./ebot-cs2-install.sh
+git clone https://github.com/Flegma/ebot-cs2-install-script.git ebot-cs2-install && cd ebot-cs2-install && chmod +x ebot-cs2-install.sh && ./ebot-cs2-install.sh
 ```
 
 # CREDIT
