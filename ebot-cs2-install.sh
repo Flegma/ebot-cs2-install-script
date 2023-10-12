@@ -169,7 +169,7 @@ COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction
 npm install
 #run ebot app now
 screen -S ebot-cs2-app -d -m
-screen -S ebot-cs2-app -X stuff "php /home/ebot/ebot-cs2-app/bootstrap.php"
+screen -S ebot-cs2-app -X stuff "php /home/ebot/ebot-cs2-app/bootstrap.php\n"
 screen -S ebot-cs2-app -X detach 
 #todo: check if ebot is running before continuing
 printf "$green" "eBot CS2 app running. Now editing CS2 webpanel configuration."
@@ -296,4 +296,4 @@ printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
 
 
 #todo: write service for logs and app
-#todo: write cronjob script that will periodically check if all processes are running
+#todo: write cronjob script that will periodically check if all processes are running.
