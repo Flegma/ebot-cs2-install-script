@@ -255,7 +255,7 @@ php symfony doctrine:build --all --no-confirmation
 
 #echo "THE LAST QUESTION: I need a username and a password for ebot"
 printf "$yellow" "THE LAST QUESTION: You need a username and a password for ebot."
-read -p "Email: " -e -i email EBOTEMAIL
+read -p "Email: " -e -i email@domain.com EBOTEMAIL
 read -p "Username: " -e -i admin EBOTUSER
 read -p "Password: " -e -i password EBOTPASSWORD
 php symfony guard:create-user --is-super-admin $EBOTEMAIL $EBOTUSER $EBOTPASSWORD
