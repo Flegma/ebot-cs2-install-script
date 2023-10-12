@@ -4,8 +4,9 @@ I will be updating the script with new stuff, this is only first release because
 
 RUN THE SCRIPT AS ROOT (everything should be pretty straighforward):
 
+```
 wget https://raw.githubusercontent.com/Flegma/ebot-cs2-install-script/main/ebot-cs2-install.sh && chmod +x ebot-cs2-install.sh && ./ebot-cs2-install.sh
-
+```
 
 # CREDIT
 Destr0 (ebot csgo and ebot cs2 project lead)
