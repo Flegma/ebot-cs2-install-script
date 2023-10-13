@@ -94,7 +94,7 @@ mv configs/logs-receiver.json.sample configs/primary.json
 #todo: edit the config json before starting the process if needed
 screen -S ebot-cs2-logs -d -m
 screen -S ebot-cs2-logs -X stuff "ts-node /home/ebot/ebot-cs2-logs/src/logs-receiver configs/primary.json\n"
-screen -S ebot-cs2-logs -X detach 
+screen -S ebot-cs2-logs -X detach
 #todo: check if logs are running properly before continuing
 printf "$green" "eBot CS2 logs running. Now editing CS2 application configuration."
 echo 'date.timezone = Europe/Zagreb' >> /etc/php/7.4/cli/php.ini
@@ -169,8 +169,8 @@ COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction
 npm install
 #run ebot app now
 screen -S ebot-cs2-app -d -m
-screen -S ebot-cs2-app -X stuff "php /home/ebot/ebot-cs2-app/bootstrap.php\n"
-screen -S ebot-cs2-app -X detach 
+screen -S ebot-cs2-app -X stuff "/usr/bin/php /home/ebot/ebot-cs2-app/bootstrap.php\n"
+screen -S ebot-cs2-app -X detach
 #todo: check if ebot is running before continuing
 printf "$green" "eBot CS2 app running. Now editing CS2 webpanel configuration."
 # Wait for the user to press Enter
