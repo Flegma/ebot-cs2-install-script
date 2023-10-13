@@ -131,7 +131,7 @@ DELAY_BUSY_SERVER = 120
 NB_MAX_MATCHS = 0
 PAUSE_METHOD = "nextRound" ; nextRound or instantConfirm or instantNoConfirm
 NODE_STARTUP_METHOD = "node" ; binary file name or none in case you are starting it with forever or manually
-LOG_ADDRESS_SERVER = "'$PUBLIC_IP':12345" ; todo: check if this runs on localhost or external ip
+LOG_ADDRESS_SERVER = "http://'$PUBLIC_IP':12345" ; todo: check if this runs on localhost or external ip
 WEBSOCKET_SECRET_KEY = "'$websocket_secret'"
 
 [Redis]
