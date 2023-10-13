@@ -2,6 +2,7 @@
 # Installer for eBot CS2 by Flegma - Email: Flegma@gmail.com, Web: https://adria.gg, Discord: flegma (feel free to reach out here or on any social network)
 # First version of the script, still a lot of things to improve and add (like asking if you want it to run on IP or subdomain, adding various checks, etc.)
 # Script tested on Hetzner Cloud - on images "Ubuntu 20.04" and "Ubuntu 22.04". LAMP stack PHP 7.4, MySQL 8.0, Apache 2.4
+export DEBIAN_FRONTEND=noninteractive #added this so that the prompts for service restarts doesnt popout
 red='\e[1;31m%s\e[0m\n'
 green='\e[1;32m%s\e[0m\n'
 yellow='\e[1;33m%s\e[0m\n'
@@ -34,6 +35,7 @@ apt-get install -y nodejs npm
 npm -g install n
 npm -g install yarn
 n lts
+timedatectl set-timezone Europe/Zagreb
 hash -r 
 cd --
 wget https://getcomposer.org/composer-2.phar && chmod +x composer-2.phar && mv composer-2.phar /usr/bin/composer
@@ -168,10 +170,12 @@ DELAY_READY = true' > /home/ebot/ebot-cs2-app/config/config.ini
 COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction
 npm install
 #run ebot app now
+echo '#!/bin/bash
 screen -S ebot-cs2-app -d -m
 screen -S ebot-cs2-app -X stuff "/usr/bin/php /home/ebot/ebot-cs2-app/bootstrap.php\n"
-screen -S ebot-cs2-app -X detach
-#todo: check if ebot is running before continuing
+screen -S ebot-cs2-app -X detach' > /home/ebot/ebot-cs2-app/ebot.sh
+chmod +x /home/ebot/ebot-cs2-app/ebot.sh
+#todo: check if ebot is running before continuing - need to change order of installs
 printf "$green" "eBot CS2 app running. Now editing CS2 webpanel configuration."
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
@@ -259,15 +263,12 @@ read -p "Email: " -e -i email@domain.com EBOTEMAIL
 read -p "Username: " -e -i admin EBOTUSER
 read -p "Password: " -e -i password EBOTPASSWORD
 php symfony guard:create-user --is-super-admin $EBOTEMAIL $EBOTUSER $EBOTPASSWORD
-
 chown -R www-data:www-data /home/ebot/
 chmod -R 755 /home/ebot/
 chmod -R 777 /home/ebot/ebot-cs2-web/cache/
-
 printf "$green" "Installed eBot CS2 stuff. Editing Apache configuration now."
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
-#
 read -p "Enter subdomain/domain on which the eBot will be running: " EBOT_DOMAIN
 echo "<VirtualHost *:80>
 	#Edit your email
@@ -288,9 +289,9 @@ echo "<VirtualHost *:80>
 	</Directory>
 	</VirtualHost>" > /etc/apache2/sites-available/ebotcs2.conf
 
-a2enmod rewrite
-a2ensite ebotcs2.conf
-service apache2 restart
+a2enmod rewrite && a2ensite ebotcs2.conf && service apache2 restart
+
+cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
 
 printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
 
