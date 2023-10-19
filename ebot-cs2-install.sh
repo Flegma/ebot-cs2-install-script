@@ -191,6 +191,7 @@ echo '# ----------------------------------------------------------------------
 
   default_max_round: 12
   default_rules: esl5on5
+  default_overtime_enable: false
   default_overtime_max_round: 3
   default_overtime_startmoney: 12000
 
