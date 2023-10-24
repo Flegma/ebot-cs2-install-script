@@ -294,8 +294,47 @@ a2enmod rewrite && a2ensite ebotcs2.conf && service apache2 restart
 
 cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
 
+# Create systemd service for ebot-cs2-app
+printf "$yellow" "Installing services for ebot-cs2-app and ebot-cs2-logs."
+
+echo "[Unit]
+Description=eBot CS2 App Background service
+
+[Service]
+User=root
+Group=root
+ExecStart=/usr/bin/php /home/ebot/ebot-cs2-app/bootstrap.php
+WorkingDirectory=/home/ebot/ebot-cs2-app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/ebot-cs2-app.service
+
+# Create systemd service for ebot-cs2-logs service
+echo "[Unit]
+Description=eBot CS2 Logs Background service
+
+[Service]
+User=root
+Group=root
+ExecStart=/usr/local/bin/ts-node /home/ebot/ebot-cs2-logs/src/logs-receiver configs/primary.json
+WorkingDirectory=/home/ebot/ebot-cs2-logs
+Restart=always
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/ebot-cs2-logs.service
+
+systemctl daemon-reload
+systemctl enable ebot-cs2-app #start this service on boot
+systemctl enable ebot-cs2-logs #start this service on boot
+systemctl start ebot-cs2-app #start right now
+systemctl start ebot-cs2-logs #start right now
+
+printf "$green" "You can stop/start/restart services with: service ebot-cs2-app restart OR service ebot-cs2-logs restart"
+
 printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
 
+# Wait for the user to press Enter
+read -p "Press Enter to continue..."
 
-#todo: write service for logs and app
 #todo: write cronjob script that will periodically check if all processes are running.
