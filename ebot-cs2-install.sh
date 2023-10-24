@@ -343,12 +343,13 @@ echo '#!/bin/bash
 
 SERVICE_NAME="ebot-cs2-logs"
 
-if (( $(ps -ef | grep -v grep | grep $SERVICE_NAME | wc -l) > 0 ))
-then
+SERVICE_STATUS=$(systemctl is-active $SERVICE_NAME)
+
+if [ "$SERVICE_STATUS" = "active" ]; then
     echo "$SERVICE_NAME is running."
 else
     echo "$SERVICE_NAME is not running. Restarting $SERVICE_NAME..."
-    sudo service $SERVICE_NAME restart
+    systemctl restart $SERVICE_NAME
 fi' > /home/ebot/check-ebot-cs2-logs.sh
 
 #make it executable
@@ -358,12 +359,13 @@ echo '#!/bin/bash
 
 SERVICE_NAME="ebot-cs2-app"
 
-if (( $(ps -ef | grep -v grep | grep $SERVICE_NAME | wc -l) > 0 ))
-then
+SERVICE_STATUS=$(systemctl is-active $SERVICE_NAME)
+
+if [ "$SERVICE_STATUS" = "active" ]; then
     echo "$SERVICE_NAME is running."
 else
     echo "$SERVICE_NAME is not running. Restarting $SERVICE_NAME..."
-    sudo service $SERVICE_NAME restart
+    systemctl restart $SERVICE_NAME
 fi' > /home/ebot/check-ebot-cs2-app.sh
 
 #make it executable
