@@ -106,6 +106,7 @@ echo 'date.timezone = Europe/Zagreb' >> /etc/php/7.4/apache2/php.ini
 read -p "Press Enter to continue..."
 cd /home/ebot/ebot-cs2-app/
 read -p "Enter a secret key that will be used for websocket: " websocket_secret
+#todo: ask/check if the installation will be on .tld, IP address or LAN env
 # Generate config.ini for ebot-cs2-app
 echo '; eBot - A bot for match management for CS2
 ; @license     http://creativecommons.org/licenses/by/3.0/ Creative Commons 3.0
@@ -132,7 +133,7 @@ DELAY_BUSY_SERVER = 120
 NB_MAX_MATCHS = 0
 PAUSE_METHOD = "nextRound" ; nextRound or instantConfirm or instantNoConfirm
 NODE_STARTUP_METHOD = "node" ; binary file name or none in case you are starting it with forever or manually
-LOG_ADDRESS_SERVER = "http://'$PUBLIC_IP':12345" ; todo: check if this runs on localhost or external ip
+LOG_ADDRESS_SERVER = "http://'$PUBLIC_IP':12345" ;
 WEBSOCKET_SECRET_KEY = "'$websocket_secret'"
 
 [Redis]
@@ -272,6 +273,7 @@ chmod -R 777 /home/ebot/ebot-cs2-web/cache/
 printf "$green" "Installed eBot CS2 stuff. Editing Apache configuration now."
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
+#todo: ask/check if the installation will be on .tld, IP address or LAN env - different apache configuration needed for IP/LAN env
 read -p "Enter subdomain/domain on which the eBot will be running: " EBOT_DOMAIN
 echo "<VirtualHost *:80>
 	#Edit your email
@@ -391,5 +393,3 @@ printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
 
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
-
-#todo: write cronjob script that will periodically check if all processes are running.
