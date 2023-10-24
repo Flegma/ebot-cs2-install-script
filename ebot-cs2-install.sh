@@ -94,9 +94,10 @@ npm install
 yarn install
 mv configs/logs-receiver.json.sample configs/primary.json
 #todo: edit the config json before starting the process if needed
-screen -S ebot-cs2-logs -d -m
-screen -S ebot-cs2-logs -X stuff "ts-node /home/ebot/ebot-cs2-logs/src/logs-receiver configs/primary.json\n"
-screen -S ebot-cs2-logs -X detach
+#we dont need to run process in screen anymore since there will be a service at the end
+#screen -S ebot-cs2-logs -d -m
+#screen -S ebot-cs2-logs -X stuff "ts-node /home/ebot/ebot-cs2-logs/src/logs-receiver configs/primary.json\n"
+#screen -S ebot-cs2-logs -X detach
 #todo: check if logs are running properly before continuing
 printf "$green" "eBot CS2 logs running. Now editing CS2 application configuration."
 echo 'date.timezone = Europe/Zagreb' >> /etc/php/7.4/cli/php.ini
@@ -105,6 +106,7 @@ echo 'date.timezone = Europe/Zagreb' >> /etc/php/7.4/apache2/php.ini
 read -p "Press Enter to continue..."
 cd /home/ebot/ebot-cs2-app/
 read -p "Enter a secret key that will be used for websocket: " websocket_secret
+#todo: ask/check if the installation will be on .tld, IP address or LAN env
 # Generate config.ini for ebot-cs2-app
 echo '; eBot - A bot for match management for CS2
 ; @license     http://creativecommons.org/licenses/by/3.0/ Creative Commons 3.0
@@ -131,7 +133,7 @@ DELAY_BUSY_SERVER = 120
 NB_MAX_MATCHS = 0
 PAUSE_METHOD = "nextRound" ; nextRound or instantConfirm or instantNoConfirm
 NODE_STARTUP_METHOD = "node" ; binary file name or none in case you are starting it with forever or manually
-LOG_ADDRESS_SERVER = "http://'$PUBLIC_IP':12345" ; todo: check if this runs on localhost or external ip
+LOG_ADDRESS_SERVER = "http://'$PUBLIC_IP':12345" ;
 WEBSOCKET_SECRET_KEY = "'$websocket_secret'"
 
 [Redis]
@@ -170,11 +172,12 @@ DELAY_READY = true' > /home/ebot/ebot-cs2-app/config/config.ini
 COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction
 npm install
 #run ebot app now
-echo '#!/bin/bash
-screen -S ebot-cs2-app -d -m
-screen -S ebot-cs2-app -X stuff "/usr/bin/php /home/ebot/ebot-cs2-app/bootstrap.php\n"
-screen -S ebot-cs2-app -X detach' > /home/ebot/ebot-cs2-app/ebot.sh
-chmod +x /home/ebot/ebot-cs2-app/ebot.sh
+#we dont need to run process in screen anymore since there will be a service at the end
+#echo '#!/bin/bash
+#screen -S ebot-cs2-app -d -m
+#screen -S ebot-cs2-app -X stuff "/usr/bin/php /home/ebot/ebot-cs2-app/bootstrap.php\n"
+#screen -S ebot-cs2-app -X detach' > /home/ebot/ebot-cs2-app/ebot.sh
+#chmod +x /home/ebot/ebot-cs2-app/ebot.sh
 #todo: check if ebot is running before continuing - need to change order of installs
 printf "$green" "eBot CS2 app running. Now editing CS2 webpanel configuration."
 # Wait for the user to press Enter
@@ -270,6 +273,7 @@ chmod -R 777 /home/ebot/ebot-cs2-web/cache/
 printf "$green" "Installed eBot CS2 stuff. Editing Apache configuration now."
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
+#todo: ask/check if the installation will be on .tld, IP address or LAN env - different apache configuration needed for IP/LAN env
 read -p "Enter subdomain/domain on which the eBot will be running: " EBOT_DOMAIN
 echo "<VirtualHost *:80>
 	#Edit your email
@@ -292,10 +296,100 @@ echo "<VirtualHost *:80>
 
 a2enmod rewrite && a2ensite ebotcs2.conf && service apache2 restart
 
-cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
+#cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
+
+# Create systemd service for ebot-cs2-app
+printf "$yellow" "Installing services for ebot-cs2-app and ebot-cs2-logs."
+
+echo "[Unit]
+Description=eBot CS2 App Background service
+
+[Service]
+User=root
+Group=root
+ExecStart=/usr/bin/php /home/ebot/ebot-cs2-app/bootstrap.php
+WorkingDirectory=/home/ebot/ebot-cs2-app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/ebot-cs2-app.service
+
+# Create systemd service for ebot-cs2-logs service
+echo "[Unit]
+Description=eBot CS2 Logs Background service
+
+[Service]
+User=root
+Group=root
+ExecStart=/usr/local/bin/ts-node /home/ebot/ebot-cs2-logs/src/logs-receiver configs/primary.json
+WorkingDirectory=/home/ebot/ebot-cs2-logs
+Restart=always
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/ebot-cs2-logs.service
+
+systemctl daemon-reload
+systemctl enable ebot-cs2-app #start this service on boot
+systemctl enable ebot-cs2-logs #start this service on boot
+systemctl start ebot-cs2-app #start right now
+systemctl start ebot-cs2-logs #start right now
+
+printf "$green" "You can stop/start/restart services with: service ebot-cs2-app restart OR service ebot-cs2-logs restart"
+
+# Wait for the user to press Enter
+read -p "Press Enter to continue..."
+
+#add script (and run it in cronjob every minute) that will check ebot-cs2-app and ebot-cs2-logs process
+printf "$yellow" "Adding scripts and cronjobs to check services periodically."
+echo '#!/bin/bash
+
+SERVICE_NAME="ebot-cs2-logs"
+
+SERVICE_STATUS=$(systemctl is-active $SERVICE_NAME)
+
+if [ "$SERVICE_STATUS" = "active" ]; then
+    echo "$SERVICE_NAME is running."
+else
+    echo "$SERVICE_NAME is not running. Restarting $SERVICE_NAME..."
+    systemctl restart $SERVICE_NAME
+fi' > /home/ebot/check-ebot-cs2-logs.sh
+
+#make it executable
+chmod +x /home/ebot/check-ebot-cs2-logs.sh
+
+echo '#!/bin/bash
+
+SERVICE_NAME="ebot-cs2-app"
+
+SERVICE_STATUS=$(systemctl is-active $SERVICE_NAME)
+
+if [ "$SERVICE_STATUS" = "active" ]; then
+    echo "$SERVICE_NAME is running."
+else
+    echo "$SERVICE_NAME is not running. Restarting $SERVICE_NAME..."
+    systemctl restart $SERVICE_NAME
+fi' > /home/ebot/check-ebot-cs2-app.sh
+
+#make it executable
+chmod +x /home/ebot/check-ebot-cs2-app.sh
+
+#edit crontab
+# Write out current crontab
+crontab -l > crontab.tmp #check if there is already some cronjob
+
+# Echo new cron into cron file
+echo "* * * * * cd /home/ebot/ && ./check-ebot-cs2-app.sh" >> crontab.tmp
+echo "* * * * * cd /home/ebot/ && ./check-ebot-cs2-logs.sh" >> crontab.tmp
+
+# Install new cron file
+crontab crontab.tmp
+
+# Remove the temporary file
+rm crontab.tmp
+
+printf "$green" "Crontab and services installed and Done."
 
 printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
 
-
-#todo: write service for logs and app
-#todo: write cronjob script that will periodically check if all processes are running.
+# Wait for the user to press Enter
+read -p "Press Enter to continue..."

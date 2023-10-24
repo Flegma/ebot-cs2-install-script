@@ -8,6 +8,23 @@ RUN THE SCRIPT AS ROOT (everything should be pretty straighforward):
 git clone https://github.com/Flegma/ebot-cs2-install-script.git ebot-cs2-install && cd ebot-cs2-install && chmod +x ebot-cs2-install.sh && ./ebot-cs2-install.sh
 ```
 
+After everything is installed, you can check the status of the ebot services by running:
+```
+service ebot-cs2-app status
+```
+or
+```
+service ebot-cs2-logs status
+```
+to check the status respectively. Commands available: service start/stop/restart service_name.
+
+You can also check/edit the cronjobs with:
+```
+crontab -e
+```
+
+TODO: Ask if the installation is on .tld, IP address and/or LAN environment
+
 ## Credits
 * Julien 'deStrO' Pardons (destro@esport-tools.net)
 
