@@ -306,7 +306,8 @@ echo '# ----------------------------------------------------------------------
   # the demos can be downloaded at the matchpage, if its true
 
   demo_download: true
-  
+
+  websocket_url: 'http://"$EBOT_IP":12360'
   ebot_ip: '$EBOT_IP'
   ebot_port: 12360
 
