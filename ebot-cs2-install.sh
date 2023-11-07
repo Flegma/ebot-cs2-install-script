@@ -294,25 +294,6 @@ echo "<VirtualHost *:80>
 	</Directory>
 	</VirtualHost>" > /etc/apache2/sites-available/ebotcs2.conf
 
-#dont know if we need this
-echo "Options +FollowSymLinks +ExecCGI
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  # uncomment the following line, if you are having trouble
-  # getting no_script_name to work
-  RewriteBase /
-  # we skip all files with .something
-  #RewriteCond %{REQUEST_URI} \..+$
-  #RewriteCond %{REQUEST_URI} !\.html$
-  #RewriteRule .* - [L]
-  # we check if the .html version is here (caching)
-  RewriteRule ^$ index.html [QSA]
-  RewriteRule ^([^.]+)$ $1.html [QSA]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  # no, so we redirect to our front web controller
-  RewriteRule ^(.*)$ index.php [QSA,L]
-</IfModule>" > /home/ebot/ebot-cs2-web/web/.htaccess
-
 a2enmod rewrite && a2ensite ebotcs2.conf && service apache2 restart
 
 #cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
