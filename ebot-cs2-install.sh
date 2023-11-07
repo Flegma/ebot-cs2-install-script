@@ -40,7 +40,6 @@ hash -r
 cd --
 wget https://getcomposer.org/composer-2.phar && chmod +x composer-2.phar && mv composer-2.phar /usr/bin/composer
 printf "$green" "Installed server dependencies, now onto eBot CS2 stuff."
-PUBLIC_IP=$(wget -qO- checkip.amazonaws.com)
 # Prompt for the new root password
 read -p "Enter the new MySQL root password: " new_root_password
 # Use mysqladmin to change the root password
@@ -107,6 +106,84 @@ read -p "Press Enter to continue..."
 cd /home/ebot/ebot-cs2-app/
 read -p "Enter a secret key that will be used for websocket: " websocket_secret
 #todo: ask/check if the installation will be on .tld, IP address or LAN env
+
+# Control variable for the outer loop
+outer_loop=true
+
+while $outer_loop; do
+  echo "Will you run eBot on LAN or online:"
+  echo "(1) Online"
+  echo "(2) LAN"
+  read lan_online
+  if [ "$lan_online" == "1" ]
+  then
+    while true; do
+      echo "Do you want the script to autodetect your PUBLIC IP or enter manually:"
+      echo "(1) Autodetect PUBLIC IP"
+      echo "(2) Enter PUBLIC IP manually"
+      read ip_choice
+      if [ "$ip_choice" == "1" ]
+      then
+        PUBLIC_IP=$(wget -qO- checkip.amazonaws.com)
+        EBOT_IP=$PUBLIC_IP
+        outer_loop=false
+        break
+      elif [ "$ip_choice" == "2" ]
+      then
+        #todo: i can also try and get public ip from network interface here, same as on LAN
+        read -p "Enter your public IP:" EBOT_IP
+        outer_loop=false
+        break
+      else
+        echo "Invalid choice. Please choose 1 or 2."
+      fi
+    done
+  elif [ "$lan_online" == "2" ]
+  then
+    while true; do
+      echo "Autodetect your network interfaces or enter IP manually:"
+      echo "(1) Autodetect (usually eth0 or similar)"
+      echo "(2) Enter IP manually"
+      read network_choice
+      if [ "$network_choice" == "1" ]
+      then
+        # Get a list of all network interfaces
+        interfaces=$(ls /sys/class/net)
+
+        # Print the list of network interfaces
+        echo "Available network interfaces:"
+        echo "$interfaces"
+
+        # Ask the user to choose a network interface
+        echo "Please enter the name of the network interface you want to use:"
+        read interface        
+
+        #todo: Check if the chosen interface is in the list of interfaces - validation
+        # Get the IP address of the chosen network interface
+        EBOT_IP=$(ip -4 addr show $interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+        # Print the IP address
+        echo "The IP address of $interface is: $EBOT_IP"
+        outer_loop=false
+        break
+      elif [ "$network_choice" == "2" ]
+      then
+        read -p "Enter your LAN IP:" EBOT_IP
+        outer_loop=false
+        break
+      else
+        echo "Invalid choice. Please type 1 or 2."
+      fi
+    done
+  else
+    echo "Invalid choice. Please type 1 or 2."
+  fi
+done
+
+echo "eBot IP that is in use is now:" $EBOT_IP
+# Wait for the user to press Enter
+read -p "Press Enter to continue..."
+
+
 # Generate config.ini for ebot-cs2-app
 echo '; eBot - A bot for match management for CS2
 ; @license     http://creativecommons.org/licenses/by/3.0/ Creative Commons 3.0
@@ -122,7 +199,7 @@ MYSQL_PASS = "'$ebot_user_password'"
 MYSQL_BASE = "'$ebot_db_name'"
 
 [Config]
-BOT_IP = "'$PUBLIC_IP'" 
+BOT_IP = "'$EBOT_IP'" 
 BOT_PORT = 12360
 SSL_ENABLED = false
 SSL_CERTIFICATE_PATH = "ssl/cert.pem"
@@ -133,7 +210,7 @@ DELAY_BUSY_SERVER = 120
 NB_MAX_MATCHS = 0
 PAUSE_METHOD = "nextRound" ; nextRound or instantConfirm or instantNoConfirm
 NODE_STARTUP_METHOD = "node" ; binary file name or none in case you are starting it with forever or manually
-LOG_ADDRESS_SERVER = "http://'$PUBLIC_IP':12345" ;
+LOG_ADDRESS_SERVER = "http://'$EBOT_IP':12345" ;
 WEBSOCKET_SECRET_KEY = "'$websocket_secret'"
 
 [Redis]
@@ -203,7 +280,7 @@ echo '# ----------------------------------------------------------------------
 
   demo_download: true
 
-  ebot_ip: '$PUBLIC_IP'
+  ebot_ip: '$EBOT_IP'
   ebot_port: 12360
 
   # lan or net, its to display the server IP or the GO TV IP
@@ -261,7 +338,6 @@ rm -rf /home/ebot/ebot-cs2-web/web/installation/
 php symfony cc
 php symfony doctrine:build --all --no-confirmation
 
-#echo "THE LAST QUESTION: I need a username and a password for ebot"
 printf "$yellow" "THE LAST QUESTION: You need a username and a password for ebot."
 read -p "Email: " -e -i email@domain.com EBOTEMAIL
 read -p "Username: " -e -i admin EBOTUSER
@@ -273,27 +349,99 @@ chmod -R 777 /home/ebot/ebot-cs2-web/cache/
 printf "$green" "Installed eBot CS2 stuff. Editing Apache configuration now."
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
-#todo: ask/check if the installation will be on .tld, IP address or LAN env - different apache configuration needed for IP/LAN env
-read -p "Enter subdomain/domain on which the eBot will be running: " EBOT_DOMAIN
-echo "<VirtualHost *:80>
-	#Edit your email
-	ServerAdmin $EBOTEMAIL
-	#Edit your sub-domain
-	ServerAlias $EBOT_DOMAIN
-	DocumentRoot /home/ebot/ebot-cs2-web/web
-	<Directory /home/ebot/ebot-cs2-web/web/>
-		Options Indexes FollowSymLinks MultiViews
-		AllowOverride All
-		<IfVersion < 2.4>
-			Order allow,deny
-			allow from all
-		</IfVersion>
-		<IfVersion >= 2.4>
-			Require all granted
-		</IfVersion>
-	</Directory>
-	</VirtualHost>" > /etc/apache2/sites-available/ebotcs2.conf
 
+#check if ebot will run on domain name or ip address (if online option is used, because if lan option is used, than we always run on ip address)
+if [ "$lan_online" == "1" ]
+  then
+    while true; do
+      # Offer the user two choices
+      echo "In previous question you entered that you will run eBot Online. Do you want to run it on IP or .tld (sub)domain:"
+      echo "(1) IP"
+      echo "(2) .TLD"
+
+      # Read the user's choice
+      read ip_tld_choice
+
+      # Do different stuff based on the user's choice
+      if [ "$ip_tld_choice" == "1" ]
+      then
+        echo "We will run the eBot on the" $EBOT_IP
+        echo "Alias / /home/ebot/ebot-cs2-web/web/
+        <Directory /home/ebot/ebot-cs2-web/web/>
+          AllowOverride All
+          <IfVersion < 2.4>
+            Order allow,deny
+            allow from all
+          </IfVersion>
+          <IfVersion >= 2.4>
+            Require all granted
+          </IfVersion>
+        </Directory>" > /etc/apache2/sites-available/ebotcs2.conf
+        break
+      elif [ "$ip_tld_choice" == "2" ]
+      then
+        read -p "Enter (sub)domain on which the eBot will be running: " EBOT_DOMAIN
+        echo "<VirtualHost *:80>
+        #Edit your email
+        ServerAdmin $EBOTEMAIL
+        #Edit your sub-domain
+        ServerAlias $EBOT_DOMAIN
+        DocumentRoot /home/ebot/ebot-cs2-web/web
+        <Directory /home/ebot/ebot-cs2-web/web/>
+          Options Indexes FollowSymLinks MultiViews
+          AllowOverride All
+          <IfVersion < 2.4>
+            Order allow,deny
+            allow from all
+          </IfVersion>
+          <IfVersion >= 2.4>
+            Require all granted
+          </IfVersion>
+        </Directory>
+        </VirtualHost>" > /etc/apache2/sites-available/ebotcs2.conf
+        break
+      else
+        echo "Invalid choice. Please choose 1 or 2."
+      fi
+    done
+  elif [ "$lan_online" == "2" ]
+  then
+    echo "We're running eBot on LAN IP" EBOT_IP
+    echo "Alias / /home/ebot/ebot-cs2-web/web/
+        <Directory /home/ebot/ebot-cs2-web/web/>
+          AllowOverride All
+          <IfVersion < 2.4>
+            Order allow,deny
+            allow from all
+          </IfVersion>
+          <IfVersion >= 2.4>
+            Require all granted
+          </IfVersion>
+        </Directory>" > /etc/apache2/sites-available/ebotcs2.conf
+    break
+  else
+    echo "Invalid choice. Please choose 1 or 2."
+fi
+
+echo "Options +FollowSymLinks +ExecCGI
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # uncomment the following line, if you are having trouble
+  # getting no_script_name to work
+  RewriteBase /
+  # we skip all files with .something
+  #RewriteCond %{REQUEST_URI} \..+$
+  #RewriteCond %{REQUEST_URI} !\.html$
+  #RewriteRule .* - [L]
+  # we check if the .html version is here (caching)
+  RewriteRule ^$ index.html [QSA]
+  RewriteRule ^([^.]+)$ $1.html [QSA]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  # no, so we redirect to our front web controller
+  RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>" > /home/ebot/ebot-cs2-web/web/.htaccess
+
+#enable ebot website configuration
 a2enmod rewrite && a2ensite ebotcs2.conf && service apache2 restart
 
 #cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
@@ -389,7 +537,18 @@ rm crontab.tmp
 
 printf "$green" "Crontab and services installed and Done."
 
-printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
+if [ "$ip_tld_choice" == "1" ]
+  then
+  printf "$green" "Installed everything. You can login now on: '$EBOT_IP'"
+elif [ "$ip_tld_choice" == "2" ]
+  then
+  printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
+fi  
+
+if [ "$lan_online" == "2" ]
+  then
+  printf "$green" "Installed everything. You can login now on: '$EBOT_IP'"
+fi
 
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
