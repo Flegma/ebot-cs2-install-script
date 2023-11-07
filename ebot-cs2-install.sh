@@ -105,84 +105,111 @@ echo 'date.timezone = Europe/Zagreb' >> /etc/php/7.4/apache2/php.ini
 read -p "Press Enter to continue..."
 cd /home/ebot/ebot-cs2-app/
 read -p "Enter a secret key that will be used for websocket: " websocket_secret
+
+#PUBLIC_IP=$(wget -qO- checkip.amazonaws.com)
+#EBOT_IP=$PUBLIC_IP
+#interfaces=$(ls /sys/class/net)
+#EBOT_IP=$(ip -4 addr show $interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+#read -p "Enter your LAN IP:" EBOT_IP
 #todo: ask/check if the installation will be on .tld, IP address or LAN env
 
-# Control variable for the outer loop
-outer_loop=true
+while true; do
+    echo "Do you want to run eBot:"
+    echo "1. Online"
+    echo "2. LAN"
+    read -p "Enter your choice (1 or 2): " environment
 
-while $outer_loop; do
-  echo "Will you run eBot on LAN or online:"
-  echo "(1) Online"
-  echo "(2) LAN"
-  read lan_online
-  if [ "$lan_online" == "1" ]
-  then
+    if [[ $environment == "1" || $environment == "2" ]]; then
+        break
+    else
+        echo "Invalid choice. Please enter 1 or 2."
+    fi
+done
+
+if [[ $environment == "1" ]]; then
     while true; do
-      echo "Do you want the script to autodetect your PUBLIC IP or enter manually:"
-      echo "(1) Autodetect PUBLIC IP"
-      echo "(2) Enter PUBLIC IP manually"
-      read ip_choice
-      if [ "$ip_choice" == "1" ]
-      then
+        echo "Do you want to:"
+        echo "1. Autodetect IP"
+        echo "2. Enter IP manually"
+        read -p "Enter your choice (1 or 2): " ip_choice
+
+        if [[ $ip_choice == "1" || $ip_choice == "2" ]]; then
+            break
+        else
+            echo "Invalid choice. Please enter 1 or 2."
+        fi
+    done
+
+    if [[ $ip_choice == "2" ]]; then
+        while true; do
+            echo "Do you want to:"
+            echo "1. Manually enter IP"
+            echo "2. Choose from list of network interfaces"
+            read -p "Enter your choice (1 or 2): " interface_choice
+
+            if [[ $interface_choice == "1" || $interface_choice == "2" ]]; then
+                break
+            else
+                echo "Invalid choice. Please enter 1 or 2."
+            fi
+        done
+
+        if [[ $interface_choice == "2" ]]; then
+            echo "Available network interfaces are:"
+            interfaces=$(ip link show | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}')
+            echo "$interfaces"
+            while true; do
+                read -p "Enter the network interface from the list above: " network_interface
+                if [[ $interfaces == *"$network_interface"* ]]; then
+                    EBOT_IP=$(ip -4 addr show $network_interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+                    break
+                else
+                    echo "Invalid choice. Please enter a network interface from the list above."
+                fi
+            done
+        else
+            read -p "Enter your IP here:" EBOT_IP
+        fi
+    else
         PUBLIC_IP=$(wget -qO- checkip.amazonaws.com)
         EBOT_IP=$PUBLIC_IP
-        outer_loop=false
-        break
-      elif [ "$ip_choice" == "2" ]
-      then
-        #todo: i can also try and get public ip from network interface here, same as on LAN
-        read -p "Enter your public IP:" EBOT_IP
-        outer_loop=false
-        break
-      else
-        echo "Invalid choice. Please choose 1 or 2."
-      fi
-    done
-  elif [ "$lan_online" == "2" ]
-  then
+    fi
+else
+    # Run eBot in LAN environment here
     while true; do
-      echo "Autodetect your network interfaces or enter IP manually:"
-      echo "(1) Autodetect (usually eth0 or similar)"
-      echo "(2) Enter IP manually"
-      read network_choice
-      if [ "$network_choice" == "1" ]
-      then
-        # Get a list of all network interfaces
-        interfaces=$(ls /sys/class/net)
+        echo "Do you want to:"
+        echo "1. Manually enter LAN IP"
+        echo "2. Choose from list of network interfaces"
+        read -p "Enter your choice (1 or 2): " interface_choice
 
-        # Print the list of network interfaces
-        echo "Available network interfaces:"
-        echo "$interfaces"
-
-        # Ask the user to choose a network interface
-        echo "Please enter the name of the network interface you want to use:"
-        read interface        
-
-        #todo: Check if the chosen interface is in the list of interfaces - validation
-        # Get the IP address of the chosen network interface
-        EBOT_IP=$(ip -4 addr show $interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
-        # Print the IP address
-        echo "The IP address of $interface is: $EBOT_IP"
-        outer_loop=false
-        break
-      elif [ "$network_choice" == "2" ]
-      then
-        read -p "Enter your LAN IP:" EBOT_IP
-        outer_loop=false
-        break
-      else
-        echo "Invalid choice. Please type 1 or 2."
-      fi
+        if [[ $interface_choice == "1" || $interface_choice == "2" ]]; then
+            break
+        else
+            echo "Invalid choice. Please enter 1 or 2."
+        fi
     done
-  else
-    echo "Invalid choice. Please type 1 or 2."
-  fi
-done
+
+    if [[ $interface_choice == "2" ]]; then
+        echo "Available network interfaces are:"
+        interfaces=$(ip link show | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}')
+        echo "$interfaces"
+        while true; do
+            read -p "Enter the network interface from the list above: " network_interface
+            if [[ $interfaces == *"$network_interface"* ]]; then
+                EBOT_IP=$(ip -4 addr show $network_interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+                break
+            else
+                echo "Invalid choice. Please enter a network interface from the list above."
+            fi
+        done
+    else
+        read -p "Enter your IP here:" EBOT_IP
+    fi
+fi
 
 echo "eBot IP that is in use is now:" $EBOT_IP
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
-
 
 # Generate config.ini for ebot-cs2-app
 echo '; eBot - A bot for match management for CS2
@@ -351,13 +378,13 @@ printf "$green" "Installed eBot CS2 stuff. Editing Apache configuration now."
 read -p "Press Enter to continue..."
 
 #check if ebot will run on domain name or ip address (if online option is used, because if lan option is used, than we always run on ip address)
-if [ "$lan_online" == "1" ]
+if [ "$environment" == "1" ]
   then
     while true; do
       # Offer the user two choices
-      echo "In previous question you entered that you will run eBot Online. Do you want to run it on IP or .tld (sub)domain:"
-      echo "(1) IP"
-      echo "(2) .TLD"
+      echo "Since you're running eBot Online - do you want to run it on IP or .tld (sub)domain:"
+      echo "1. IP"
+      echo "2. .tld"
 
       # Read the user's choice
       read ip_tld_choice
@@ -381,6 +408,7 @@ if [ "$lan_online" == "1" ]
       elif [ "$ip_tld_choice" == "2" ]
       then
         read -p "Enter (sub)domain on which the eBot will be running: " EBOT_DOMAIN
+        echo "We will run the eBot on the" $EBOT_DOMAIN
         echo "<VirtualHost *:80>
         #Edit your email
         ServerAdmin $EBOTEMAIL
@@ -404,7 +432,7 @@ if [ "$lan_online" == "1" ]
         echo "Invalid choice. Please choose 1 or 2."
       fi
     done
-  elif [ "$lan_online" == "2" ]
+  elif [ "$environment" == "2" ]
   then
     echo "We're running eBot on LAN IP" EBOT_IP
     echo "Alias / /home/ebot/ebot-cs2-web/web/
@@ -444,7 +472,7 @@ echo "Options +FollowSymLinks +ExecCGI
 #enable ebot website configuration
 a2enmod rewrite && a2ensite ebotcs2.conf && service apache2 restart
 
-#cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #need to fix this by changing change order of install - ebot logs, ebot web, ebot app
+#cd /home/ebot/ebot-cs2-app/ && ./ebot.sh #todo: need to fix this by changing change order of install - ebot logs, ebot web, ebot app
 
 # Create systemd service for ebot-cs2-app
 printf "$yellow" "Installing services for ebot-cs2-app and ebot-cs2-logs."
@@ -545,7 +573,7 @@ elif [ "$ip_tld_choice" == "2" ]
   printf "$green" "Installed everything. You can login now on: '$EBOT_DOMAIN'"
 fi  
 
-if [ "$lan_online" == "2" ]
+if [ "$environment" == "2" ]
   then
   printf "$green" "Installed everything. You can login now on: '$EBOT_IP'"
 fi
