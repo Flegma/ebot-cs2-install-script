@@ -434,7 +434,7 @@ if [ "$environment" == "1" ]
     done
   elif [ "$environment" == "2" ]
   then
-    echo "We're running eBot on LAN IP" EBOT_IP
+    echo "We're running eBot on LAN IP" $EBOT_IP
     echo "Alias / /home/ebot/ebot-cs2-web/web/
         <Directory /home/ebot/ebot-cs2-web/web/>
           AllowOverride All
@@ -446,7 +446,6 @@ if [ "$environment" == "1" ]
             Require all granted
           </IfVersion>
         </Directory>" > /etc/apache2/sites-available/ebotcs2.conf
-    break
   else
     echo "Invalid choice. Please choose 1 or 2."
 fi
