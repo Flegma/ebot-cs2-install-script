@@ -446,7 +446,6 @@ if [ "$environment" == "1" ]
             Require all granted
           </IfVersion>
         </Directory>" > /etc/apache2/sites-available/ebotcs2.conf
-    break
   else
     echo "Invalid choice. Please choose 1 or 2."
 fi
