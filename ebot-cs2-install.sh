@@ -114,7 +114,7 @@ read -p "Enter a secret key that will be used for websocket: " websocket_secret
 #todo: ask/check if the installation will be on .tld, IP address or LAN env
 
 while true; do
-    echo "Do you want to run eBot:"
+    printf "$yellow" "Do you want to run eBot:"
     echo "1. Online"
     echo "2. LAN"
     read -p "Enter your choice (1 or 2): " environment
@@ -122,13 +122,13 @@ while true; do
     if [[ $environment == "1" || $environment == "2" ]]; then
         break
     else
-        echo "Invalid choice. Please enter 1 or 2."
+        printf "$red" "Invalid choice. Please enter 1 or 2."
     fi
 done
 
 if [[ $environment == "1" ]]; then
     while true; do
-        echo "Do you want to:"
+        printf "$yellow" "Do you want to:"
         echo "1. Autodetect IP"
         echo "2. Enter IP manually"
         read -p "Enter your choice (1 or 2): " ip_choice
@@ -136,13 +136,13 @@ if [[ $environment == "1" ]]; then
         if [[ $ip_choice == "1" || $ip_choice == "2" ]]; then
             break
         else
-            echo "Invalid choice. Please enter 1 or 2."
+            printf "$red" "Invalid choice. Please enter 1 or 2."
         fi
     done
 
     if [[ $ip_choice == "2" ]]; then
         while true; do
-            echo "Do you want to:"
+            printf "$yellow" "Do you want to:"
             echo "1. Manually enter IP"
             echo "2. Choose from list of network interfaces"
             read -p "Enter your choice (1 or 2): " interface_choice
@@ -150,12 +150,12 @@ if [[ $environment == "1" ]]; then
             if [[ $interface_choice == "1" || $interface_choice == "2" ]]; then
                 break
             else
-                echo "Invalid choice. Please enter 1 or 2."
+                printf "$red" "Invalid choice. Please enter 1 or 2."
             fi
         done
 
         if [[ $interface_choice == "2" ]]; then
-            echo "Available network interfaces are:"
+            printf "$green" "Available network interfaces are:"
             interfaces=$(ip link show | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}')
             echo "$interfaces"
             while true; do
@@ -164,7 +164,7 @@ if [[ $environment == "1" ]]; then
                     EBOT_IP=$(ip -4 addr show $network_interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
                     break
                 else
-                    echo "Invalid choice. Please enter a network interface from the list above."
+                    printf "$red" "Invalid choice. Please enter a network interface from the list above."
                 fi
             done
         else
@@ -177,7 +177,7 @@ if [[ $environment == "1" ]]; then
 else
     # Run eBot in LAN environment here
     while true; do
-        echo "Do you want to:"
+        printf "$yellow" "Do you want to:"
         echo "1. Manually enter LAN IP"
         echo "2. Choose from list of network interfaces"
         read -p "Enter your choice (1 or 2): " interface_choice
@@ -185,12 +185,12 @@ else
         if [[ $interface_choice == "1" || $interface_choice == "2" ]]; then
             break
         else
-            echo "Invalid choice. Please enter 1 or 2."
+            printf "$red" "Invalid choice. Please enter 1 or 2."
         fi
     done
 
     if [[ $interface_choice == "2" ]]; then
-        echo "Available network interfaces are:"
+        printf "$green" "Available network interfaces are:"
         interfaces=$(ip link show | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}')
         echo "$interfaces"
         while true; do
@@ -199,7 +199,7 @@ else
                 EBOT_IP=$(ip -4 addr show $network_interface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
                 break
             else
-                echo "Invalid choice. Please enter a network interface from the list above."
+                printf "$red" "Invalid choice. Please enter a network interface from the list above."
             fi
         done
     else
@@ -207,7 +207,7 @@ else
     fi
 fi
 
-echo "eBot IP that is in use is now:" $EBOT_IP
+printf "$green" "eBot IP that is in use is now:" $EBOT_IP
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
 
@@ -307,6 +307,7 @@ echo '# ----------------------------------------------------------------------
 
   demo_download: true
 
+  websocket_url: 'http://"$EBOT_IP":12360'
   ebot_ip: '$EBOT_IP'
   ebot_port: 12360
 
