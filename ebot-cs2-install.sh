@@ -9,6 +9,13 @@ yellow='\e[1;33m%s\e[0m\n'
 blue='\e[1;34m%s\e[0m\n'
 magenta='\e[1;35m%s\e[0m\n'
 cyan='\e[1;36m%s\e[0m\n'
+
+# ── Repository Configuration ──
+GITHUB_USER="Flegma"
+EBOT_WEB_BRANCH="master"
+EBOT_APP_BRANCH="master"
+EBOT_LOGS_BRANCH="main"
+
 apt-get update
 apt-get upgrade -y
 printf "$yellow" "Now installing LEMP stack"
@@ -55,6 +62,13 @@ y
 y
 EOF
 printf "$green" "MySQL installation has been secured (changed root password and mysql_secure_installation run."
+
+# Disable ONLY_FULL_GROUP_BY for eBot compatibility
+mysql -u root -p$new_root_password -e "SET GLOBAL sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';"
+
+# Persist across restarts
+echo "[mysqld]
+sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION" > /etc/mysql/mysql.conf.d/ebot-sql-mode.cnf
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
 printf "$yellow" "Create MySQL database and user/password that will be used later on."
@@ -75,15 +89,16 @@ read -p "Press Enter to continue..."
 mkdir /home/ebot/
 cd /home/ebot/
 npm -g install socket.io archiver formidable ts-node
-wget -O ebot-cs2-web.zip https://github.com/deStrO/eBot-CSGO-Web/archive/refs/heads/master.zip
-wget -O ebot-cs2-app.zip https://github.com/deStrO/eBot-CSGO/archive/refs/heads/master.zip
-wget -O ebot-cs2-logs.zip https://github.com/deStrO/ebot-project/archive/refs/heads/main.zip
+wget -O ebot-cs2-web.zip "https://github.com/$GITHUB_USER/eBot-CSGO-Web/archive/refs/heads/$EBOT_WEB_BRANCH.zip"
+wget -O ebot-cs2-app.zip "https://github.com/$GITHUB_USER/eBot-CSGO/archive/refs/heads/$EBOT_APP_BRANCH.zip"
+wget -O ebot-cs2-logs.zip "https://github.com/$GITHUB_USER/ebot-project/archive/refs/heads/$EBOT_LOGS_BRANCH.zip"
 unzip ebot-cs2-web.zip
-mv eBot-CSGO-Web-master ebot-cs2-web
+mv "eBot-CSGO-Web-${EBOT_WEB_BRANCH//\//-}" ebot-cs2-web
 unzip ebot-cs2-app.zip
-mv eBot-CSGO-master ebot-cs2-app
+mv "eBot-CSGO-${EBOT_APP_BRANCH//\//-}" ebot-cs2-app
 unzip ebot-cs2-logs.zip
-mv ebot-project-main ebot-cs2-logs
+mv "ebot-project-${EBOT_LOGS_BRANCH//\//-}" ebot-cs2-logs
+wget -O /home/ebot/patch-symfony.php "https://raw.githubusercontent.com/$GITHUB_USER/ebot-cs2-install-script/main/patch-symfony.php"
 printf "$green" "eBot CS2 files acquired. Doing installations and configuration changes now."
 printf "$yellow" "eBot CS2 logs configuration."
 # Wait for the user to press Enter
@@ -281,6 +296,9 @@ COMMAND_STOP_DISABLED = true
 RECORD_METHOD = "matchstart" ; matchstart or knifestart
 DELAY_READY = true' > /home/ebot/ebot-cs2-app/config/config.ini
 
+mkdir -p /home/ebot/ebot-cs2-app/logs
+mkdir -p /home/ebot/ebot-cs2-app/demos
+
 COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction
 npm install
 #run ebot app now
@@ -294,15 +312,21 @@ npm install
 printf "$green" "eBot CS2 app running. Now editing CS2 webpanel configuration."
 # Wait for the user to press Enter
 read -p "Press Enter to continue..."
+if [[ $environment == "1" ]]; then
+    EBOT_MODE="net"
+else
+    EBOT_MODE="lan"
+fi
+
 cd /home/ebot/ebot-cs2-web/
 # Generate app_user.yml
 echo '# ----------------------------------------------------------------------
 # white space are VERY important, dont remove it or it will not work
 # ----------------------------------------------------------------------
 
-  log_match: ../../ebot-csgo/logs/log_match
-  log_match_admin: ../../ebot-csgo/logs/log_match_admin
-  demo_path: ../../ebot-csgo/demos
+  log_match: ../ebot-cs2-app/logs/log_match
+  log_match_admin: ../ebot-cs2-app/logs/log_match_admin
+  demo_path: ../ebot-cs2-app/demos
 
   default_max_round: 12
   default_rules: esl5on5
@@ -321,7 +345,7 @@ echo '# ----------------------------------------------------------------------
 
   # lan or net, its to display the server IP or the GO TV IP
   # net mode display only started match on home page
-  mode: net
+  mode: '$EBOT_MODE'
 
   # set to 0 if you dont want a refresh
   refresh_time: 30
@@ -348,26 +372,8 @@ all:
       username: $ebot_user_name
       password: $ebot_user_password" > /home/ebot/ebot-cs2-web/config/databases.yml
 
-#Edit SF 1.4 class function so that it works with PHP 7.4 - protected function normalizeHeaderName($name)
-#Specify the file to edit
-file_to_edit="/home/ebot/ebot-cs2-web/lib/vendor/symfony/lib/response/sfWebResponse.class.php"
-
-# Define the new function
-new_function='
-protected function normalizeHeaderName($name)
-{
-  $out = [];
-  array_map(function($record) use (&$out) {
-    $out[] = ucfirst(strtolower($record));
-  }, explode("-",$name));
-  return implode("-",$out);
-}
-'
-
-# Use sed to delete lines 407-410 and then echo the new content starting at line 407
-sed -i '407,410d' "$file_to_edit"
-echo -e "$new_function" | sed -i '407r /dev/stdin' "$file_to_edit"
-#
+# Patch Symfony 1.4 for PHP 7.4 compatibility (all 3 affected files)
+php /home/ebot/patch-symfony.php /home/ebot/ebot-cs2-web
 cd /home/ebot/ebot-cs2-web/
 mkdir /home/ebot/ebot-cs2-web/cache/
 rm -rf /home/ebot/ebot-cs2-web/web/installation/
